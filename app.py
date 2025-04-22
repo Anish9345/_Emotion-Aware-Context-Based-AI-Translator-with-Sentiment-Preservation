@@ -1,47 +1,47 @@
 from flask import Flask, render_template, request
-from googletrans import Translator
-from sentiment_analysis import detect_sentiment  # Make sure this function works on English text
+from sentiment_analysis import detect_sentiment  # your own function
+from deep_translator import GoogleTranslator
 
 app = Flask(__name__)
 
-# Language code dictionary for dropdown
-LANGUAGES = {
-    'en': 'English',
-    'hi': 'Hindi',
-    'fr': 'French',
-    'es': 'Spanish',
-    'ru': 'Russian',
-    'ja': 'Japanese',
-    'de': 'German'
+languages = {
+    "en": "English",
+    "hi": "Hindi",
+    "fr": "French",
+    "es": "Spanish",
+    "de": "German",
+    "ru": "Russian",
+    "ja": "Japanese"
 }
-
-def translate_text(text, target_language):
-    translator = Translator()
-    try:
-        detected_lang = translator.detect(text).lang
-
-        # Translate to English for sentiment analysis if needed
-        if detected_lang != 'en':
-            temp_english_text = translator.translate(text, dest='en').text
-            sentiment = detect_sentiment(temp_english_text)
-        else:
-            sentiment = detect_sentiment(text)
-
-        # Final translation to target language
-        translated_text = translator.translate(text, dest=target_language).text
-        return sentiment, translated_text
-    except Exception as e:
-        return "Error", f"Translation Error: {e}"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    original_text = ""
+    translated_text = ""
+    sentiment = ""
+    target_lang = "fr"
+
     if request.method == "POST":
-        text = request.form["text"]
+        original_text = request.form["text"]
         target_lang = request.form["target_lang"]
-        sentiment, translated_text = translate_text(text, target_lang)
-        return render_template("index.html", sentiment=sentiment, translated_text=translated_text, original_text=text, target_lang=target_lang, languages=LANGUAGES)
-    
-    return render_template("index.html", sentiment=None, translated_text=None, original_text="", target_lang="en", languages=LANGUAGES)
+
+        try:
+            sentiment = detect_sentiment(original_text)
+        except Exception as e:
+            sentiment = "Error"
+
+        try:
+            translated_text = GoogleTranslator(source='auto', target=target_lang).translate(original_text)
+        except Exception as e:
+            translated_text = f"Translation Error: {e}"
+
+    return render_template("index.html",
+                           original_text=original_text,
+                           translated_text=translated_text,
+                           sentiment=sentiment,
+                           target_lang=target_lang,
+                           languages=languages)
+
 
 
 import os
